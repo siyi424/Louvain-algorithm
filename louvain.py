@@ -23,8 +23,10 @@ def gen_graph(path):
 
 # 每个社区的信息
 class Nodes():
-    def __init__(self, subs):
+    def __init__(self, subs, inw, next_c):
         self.subs = subs
+        self.inw = inw # 环的权重
+        self.next_c = next_c # 在firststage中记录最近的neighbor
 
 
 class Louvain():
@@ -33,43 +35,43 @@ class Louvain():
         self.C = {}
         for n in self.Graph.keys():
             subs = set([n]) # 社区的代表是n，所以社区需要包含n本身
-            nodes = Nodes(subs)
+            nodes = Nodes(subs, 0, n)
             self.C[n] = nodes
 
         self.M = self.cal_m() 
     
     
     def cal_m(self):
+        '''
+        = 图内的边 / 2 + 每个社区的inw
+        '''
         res = 0
         for n in self.Graph.keys():
             for s, w in self.Graph[n].items():
-                res += w
-        return res / 2
+                res += w / 2
+            res += self.C[n].inw
+        return res
     
     
     def delta_Q(self, i, c):
         '''
-        节点i加入社区c的增益Q * 2m (2m 是一个常数)
+        节点i加入社区c的增益 * 2m (2m 是一个常数)
         '''
         def cal_ki(i):
             ki = 0
             for n, w in self.Graph[i].items():
                 ki += w
-            return ki * 2
+            return ki
 
         def cal_kin(i, c):
-            kin = 0
-            if c in self.C.keys():
-                for n in self.C[c].subs:
-                    if n in self.Graph[i]:
-                        kin += self.Graph[i][n]
+            kin = self.Graph[c][i]
             return kin 
         
         def cal_tot(c):
             tot = 0
             for s, w in self.Graph[c].items():
                 tot += w
-            return tot
+            return tot + self.C[c].inw
 
 
         ki = cal_ki(i)
@@ -80,59 +82,83 @@ class Louvain():
         return delta_Q
     
 
-    def first_stage(self):
-        '''
-        return [i, c] or False
-        考虑节点与节点、节点与社区、社区与社区之间的关系
-        '''
+    def first_stage(self) -> bool:
+        Changed = False
         for i in self.C.keys():
             delta_Q = 0
-            next_c = i
             for n in self.Graph[i].keys():
                 temp_Q = self.delta_Q(i, n)
                 if temp_Q > delta_Q:
-                    next_c = n
-                    delta_Q = temp_Q
-            if next_c != i:
-                return [i, next_c]
-        return False
+                    self.C[i].next_c = n
+                    Changed = True
+        return Changed
+        
 
                     
-    def second_stage(self, i, next_c):
-        self.C[next_c].subs = self.C[next_c].subs | self.C[i].subs  # 社区与社区的合并
-        del self.C[i]
-
-        # 图压缩
-        # 节点i的和社区以外的节点的连线，需要都转移到节点next_c上。如果一个节点两个都连了，则权值相加。
-        # 节点i仍保留和社区内部的连线
-        # 社区与社区子节点们的转移
-        
+    def second_stage(self):
+        # 记录改变的位置，方便graph压缩查询
         record = {}
-        for s, w in self.Graph[i].items():
-            record[s] = w
-    
-        for s, w in record.items():
-            if s in self.C[next_c].subs:
-                continue
-            if s in self.Graph[next_c]:
-                self.Graph[next_c][s] += w
-            else:
-                self.Graph[next_c][s] = w
 
-            del self.Graph[i][s]
+        def search(next_c) -> int:
+            fc = next_c
+            if next_c not in record:
+                return fc
+            while True:
+                fc = record[fc]
+                if fc not in record:
+                    break
+            return fc
+                    
+
+        for i in self.C.keys():
+            next_c  =self.C[i].next_c
+            # 节点i没有更新社区时
+            if next_c == i:
+                continue
+            
+            # 节点i需要更新社区时，找到最终的社区fc
+            fc = search(next_c)
+            record[i] = fc
+            print(record[i])
+
+            self.C[fc].subs = self.C[fc].subs | self.C[i].subs
+            self.C[fc].inw = self.C[i].inw + self.Graph[i][fc] * 2 + self.C[fc].inw
+            
+
+            temp = {}
+            for s, w in self.Graph[i].items():
+                temp[s] = w
+
+            # 把节点i的links转移到社区fc
+            for s, w in temp.items():
+                if s in self.Graph[fc]:
+                    self.Graph[fc][s] += w
+                else:
+                    self.Graph[fc][s] = w
+                
+                if fc in self.Graph[s]:
+                    self.Graph[s][fc] += w
+                else: 
+                    self.Graph[s][fc] = w
+                del self.Graph[s][i]
+        
+        # 删除
+        for d in record.keys():
+            del self.C[d]
+            del self.Graph[d]
+
+
+        self.M = self.cal_m()
 
 
     def excute(self):
-        Changed = True
-        while Changed:
-            res = self.first_stage()
-            print(res)
-            if res:
-                i, next_c = res
-                self.second_stage(i, next_c)
-                Changed = True
+        C = True
+        while C:
+            changed = self.first_stage()
+            if changed:
+                self.second_stage()
             else:
-                Changed = False
+                C = False
         self.print_C()
                 
 
