@@ -98,7 +98,7 @@ class Louvain():
     def second_stage(self):
         # 记录改变的位置，方便graph压缩查询
         record = {}
-
+        
         def search(next_c) -> int:
             fc = next_c
             if next_c not in record:
