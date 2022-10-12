@@ -64,7 +64,10 @@ class Louvain():
             return ki
 
         def cal_kin(i, c):
-            kin = self.Graph[c][i]
+            kin = 0
+            for s in self.C[c].subs:
+                if s in self.Graph[i]:
+                    kin += self.Graph[i][c]
             return kin 
         
         def cal_tot(c):
@@ -83,72 +86,67 @@ class Louvain():
     
 
     def first_stage(self) -> bool:
+        '''
+        应该在这里确定的是最终的next_c
+        '''
         Changed = False
-        for i in self.C.keys():
+        for i in self.Graph.keys():
             delta_Q = 0
             for n in self.Graph[i].keys():
-                temp_Q = self.delta_Q(i, n)
+                c = self.C[n].next_c
+                temp_Q = self.delta_Q(i, c)
                 if temp_Q > delta_Q:
-                    self.C[i].next_c = n
+                    self.C[i].next_c = c
                     Changed = True
         return Changed
         
 
                     
     def second_stage(self):
-        # 记录改变的位置，方便graph压缩查询
-        record = {}
-        
-        def search(next_c) -> int:
-            fc = next_c
-            if next_c not in record:
-                return fc
-            while True:
-                fc = record[fc]
-                if fc not in record:
-                    break
-            return fc
-                    
-
+        record = set()
         for i in self.C.keys():
-            next_c  =self.C[i].next_c
-            # 节点i没有更新社区时
-            if next_c == i:
+            if i == self.C[i].next_c:
                 continue
+            next_c = self.C[i].next_c
+            record.add(i)
             
-            # 节点i需要更新社区时，找到最终的社区fc
-            fc = search(next_c)
-            record[i] = fc
-            print(record[i])
+            # 改变社区c的信息
+            self.C[next_c].subs = self.C[next_c].subs | self.C[i].subs
+            for s, w in self.Graph[i].items():
+                if self.C[s].next_c == next_c:
+                    self.C[next_c].inw += w
+            self.C[next_c].inw += self.C[i].inw 
 
-            self.C[fc].subs = self.C[fc].subs | self.C[i].subs
-            self.C[fc].inw = self.C[i].inw + self.Graph[i][fc] * 2 + self.C[fc].inw
-            
-
+            # 把节点i的links转移到社区next_c
             temp = {}
             for s, w in self.Graph[i].items():
-                temp[s] = w
-
-            # 把节点i的links转移到社区fc
+                if s != i: 
+                    temp[s] = w
             for s, w in temp.items():
-                if s in self.Graph[fc]:
-                    self.Graph[fc][s] += w
+                if s == next_c:
+                    del self.Graph[s][i]
+                    continue
+                if s in self.Graph[next_c]:
+                    self.Graph[next_c][s] += w
                 else:
-                    self.Graph[fc][s] = w
+                    self.Graph[next_c][s] = w
                 
-                if fc in self.Graph[s]:
-                    self.Graph[s][fc] += w
+                if next_c in self.Graph[s]:
+                    self.Graph[s][next_c] += w
                 else: 
-                    self.Graph[s][fc] = w
+                    self.Graph[s][next_c] = w
                 del self.Graph[s][i]
+
+
+        for i in record:
+            del self.C[i]
+            del self.Graph[i]
+            
+                
+
         
-        # 删除
-        for d in record.keys():
-            del self.C[d]
-            del self.Graph[d]
-
-
         self.M = self.cal_m()
+        self.print_C()
 
 
     def excute(self):
