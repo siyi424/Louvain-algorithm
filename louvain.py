@@ -68,7 +68,7 @@ class Louvain():
             for s in self.C[c].subs:
                 if s in self.Graph[i]:
                     kin += self.Graph[i][s]
-            return kin 
+            return kin
         
         def cal_tot(c):
             tot = 0
@@ -90,6 +90,7 @@ class Louvain():
         确定的是最终的next_c
         '''
         Changed = True
+        Res = False
         delta_Qs = [0] * len(self.Graph)
         while Changed:
             Changed = False
@@ -98,53 +99,76 @@ class Louvain():
                 for n in self.Graph[i].keys():
                     c = self.C[n].next_c
                     temp_Q = self.delta_Q(i, c)
-                    if temp_Q > delta_Qs[loc]:
+                    if temp_Q > delta_Qs[loc] and c != self.C[i].next_c:
                         self.C[i].next_c = c
                         delta_Qs[loc] = temp_Q
                         Changed = True 
+                        Res = True
                 loc += 1  
-        res = not Changed
-        return res
+        return Res
         
 
                     
     def second_stage(self):
-        Ckeys = set(self.C.keys())
-        for i in Ckeys:
-            if i == self.C[i].next_c:
-                continue
-            next_c = self.C[i].next_c
-
+        '''
+        重新生成新的网络
+        '''
+        # 记录网络的节点们
+        Record = {}
+        for i in self.C.keys():
+            c = self.C[i].next_c
+            if c not in Record:
+                Record[c] = set()
+                Record[c].add(i)
+            else:
+                Record[c].add(i)
+        
+        # 生成网络
+        C = {}
+        Graph = {}
+        for i in Record.keys():
+            # 改变C
+            def cal_inw(p):
+                inw = 0
+                for n, w in self.Graph[p].items():
+                    if n in Record[p]:
+                        inw += (w * 2 + self.C[n].inw)
+                return inw
             
-            # 改变社区c的信息
-            self.C[next_c].subs = self.C[next_c].subs | self.C[i].subs
-            for s, w in self.Graph[i].items():
-                if self.C[s].next_c == next_c:
-                    self.C[next_c].inw += w
-            self.C[next_c].inw += self.C[i].inw 
-
-            # 把节点i的links转移到社区next_c
-            iTems = list(self.Graph[i].items())
-            for s, w in iTems:
-                if i == s:
-                    continue
-                del self.Graph[s][i]
-                if s == next_c:    
-                    continue
-                if s in self.Graph[next_c]:
-                    self.Graph[next_c][s] += w
-                else:
-                    self.Graph[next_c][s] = w
-                
-                if next_c in self.Graph[s]:
-                    self.Graph[s][next_c] += w
-                else: 
-                    self.Graph[s][next_c] = w
+            def cal_subs(p):
+                subs = Record[p]
+                for n in Record[p]:
+                    subs = self.C[n].subs | subs
+                return subs
             
-            del self.Graph[i]
-            del self.C[i]
+            subs = cal_subs(i)
+            inw = cal_inw(i)
+            C[i] = Nodes(subs, inw, i)
 
-            
+            # 改变graph
+            Graph[i] = {}
+            for n in Record[i]:
+                for s, w in self.Graph[n].items():
+                    # 如果是新的网络节点与该子节点之间的连线，则更新至新的节点i
+                    if s in Record:
+                        if s in Graph[i]:
+                            Graph[i][s] += w
+                        else:
+                            Graph[i][s] = w
+                    else:
+                        # 如果不是，则需要先找到s的对应的网络节点，再更新
+                        loc = -1
+                        for p in Record:
+                            if s in Record[p]:
+                                loc = p
+                                break
+                        if loc in Graph[i]:
+                            Graph[i][loc] += w
+                        else:
+                            Graph[i][loc] = w
+        self.C = C
+        self.Graph = Graph
+        
         self.M = self.cal_m()
         print(self.M)
 
