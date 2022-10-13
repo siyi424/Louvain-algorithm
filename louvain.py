@@ -68,7 +68,7 @@ class Louvain():
             for s in self.C[c].subs:
                 if s in self.Graph[i]:
                     kin += self.Graph[i][s]
-            return kin * 2
+            return kin 
         
         def cal_tot(c):
             tot = 0
@@ -87,19 +87,22 @@ class Louvain():
 
     def first_stage(self) -> bool:
         '''
-        应该在这里确定的是最终的next_c
+        确定的是最终的next_c
         '''
         Changed = True
+        delta_Qs = [0] * len(self.Graph)
         while Changed:
             Changed = False
+            loc = 0
             for i in self.Graph.keys():
-                delta_Q = self.delta_Q(i, self.C[i].next_c)
                 for n in self.Graph[i].keys():
                     c = self.C[n].next_c
                     temp_Q = self.delta_Q(i, c)
-                    if temp_Q > 0 and temp_Q > delta_Q:
+                    if temp_Q > delta_Qs[loc]:
                         self.C[i].next_c = c
-                        Changed = True   
+                        delta_Qs[loc] = temp_Q
+                        Changed = True 
+                loc += 1  
         res = not Changed
         return res
         
@@ -123,8 +126,10 @@ class Louvain():
             # 把节点i的links转移到社区next_c
             iTems = list(self.Graph[i].items())
             for s, w in iTems:
+                if i == s:
+                    continue
                 del self.Graph[s][i]
-                if s == next_c:
+                if s == next_c:    
                     continue
                 if s in self.Graph[next_c]:
                     self.Graph[next_c][s] += w
