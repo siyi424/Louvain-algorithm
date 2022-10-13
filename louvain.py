@@ -179,7 +179,11 @@ class Louvain():
                 self.second_stage()
             else:
                 C = False
+
+        res = self.get_res()
         self.print_C()
+        return res
+        
                 
 
     def print_C(self):
@@ -190,10 +194,69 @@ class Louvain():
             for s in self.C[n].subs:
                 sub.add(s)
             print("节点",i, '--', n, "----", sub)
+
     
+    def get_res(self):
+        res = {}
+        for n in self.C:
+            res[n] = self.C[n].subs
+        return res
     
-    def accuracy(self):
-        
+
+
+def cal_accuracy(path, dataset) -> float:
+    '''
+    path: 标签文件的路径。 dataset: 聚类结果{{}, {},...}, 无标签。
+    '''
+    # 获取原始标签: {label: node}
+    Record = {} 
+    with open(path, "r") as f:
+        for l in f:
+            line = l.strip().split()
+            n = line[0]
+            label = line[1]
+            Record[n] = label
+    
+    # 给数据集dataset加上标签
+    labeled = {}
+    for n in dataset:
+        labels = {}
+        for s in dataset[n]:
+            l = Record[s]
+            if l not in labels:
+                labels[l] = 1
+            else:
+                labels[l] += 1
+        res_l = max(labels, key=labels.get)
+        labeled[res_l] = dataset[n]
+    print(labeled)
+    
+    # 计算accuracy
+    correct, all_nodes = 0, 0
+    for i in labeled:
+        for j in labeled[i]:
+            all_nodes += 1
+            if Record[j] == i:
+                correct += 1
+    
+    return correct / all_nodes
+
+
+def print_origon_dataset(path):
+    Record = {} 
+    with open(path, "r") as f:
+        for l in f:
+            line = l.strip().split()
+            n = line[0]
+            label = line[1]
+            if label in Record:
+                Record[label].add(n)
+            else:
+                Record[label] = set([n])
+    for n in Record:
+        print(n, '--', Record[n])
+    return Record
+
 
 
 
@@ -201,4 +264,10 @@ if __name__ == "__main__":
     path = "./dataset/email-Eu-core.txt"
     Graph = gen_graph(path)
     louvain = Louvain(Graph)
-    louvain.excute()
+    res = louvain.excute()
+
+    path2 = './dataset/email-Eu-core-department-labels.txt'
+    ref = print_origon_dataset(path2)
+
+    accuracy = cal_accuracy(path2, res)
+    print(accuracy)
