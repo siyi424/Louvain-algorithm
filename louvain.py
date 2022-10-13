@@ -89,18 +89,19 @@ class Louvain():
         '''
         应该在这里确定的是最终的next_c
         '''
-        Changed = False
-        for i in self.Graph.keys():
-            delta_Q = 0
-            for n in self.Graph[i].keys():
-                if n not in self.C:
-                    continue
-                c = self.C[n].next_c
-                temp_Q = self.delta_Q(i, c)
-                if temp_Q > delta_Q:
-                    self.C[i].next_c = c
-                    Changed = True
-        return Changed
+        Changed = True
+        while Changed:
+            Changed = False
+            for i in self.Graph.keys():
+                delta_Q = self.delta_Q(i, self.C[i].next_c)
+                for n in self.Graph[i].keys():
+                    c = self.C[n].next_c
+                    temp_Q = self.delta_Q(i, c)
+                    if temp_Q > 0 and temp_Q > delta_Q:
+                        self.C[i].next_c = c
+                        Changed = True   
+        res = not Changed
+        return res
         
 
                     
@@ -138,7 +139,6 @@ class Louvain():
             del self.Graph[i]
             del self.C[i]
 
-            
             
         self.M = self.cal_m()
         print(self.M)
