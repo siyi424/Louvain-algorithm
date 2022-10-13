@@ -49,9 +49,8 @@ class Louvain():
         for n in self.Graph.keys():
             for s, w in self.Graph[n].items():
                 res += w / 2
-            res += self.C[n].inw
         return res
-    
+
     
     def delta_Q(self, i, c):
         '''
@@ -68,7 +67,7 @@ class Louvain():
             for s in self.C[c].subs:
                 if s in self.Graph[i]:
                     kin += self.Graph[i][s]
-            return kin
+            return kin 
         
         def cal_tot(c):
             tot = 0
@@ -132,7 +131,7 @@ class Louvain():
                 inw = 0
                 for n, w in self.Graph[p].items():
                     if n in Record[p]:
-                        inw += (w * 2 + self.C[n].inw)
+                        inw += w * 2
                 return inw
             
             def cal_subs(p):
@@ -170,7 +169,6 @@ class Louvain():
         self.Graph = Graph
         
         self.M = self.cal_m()
-        print(self.M)
 
 
     def excute(self):
@@ -192,7 +190,10 @@ class Louvain():
             for s in self.C[n].subs:
                 sub.add(s)
             print("节点",i, '--', n, "----", sub)
-            
+    
+    
+    def accuracy(self):
+        
 
 
 
