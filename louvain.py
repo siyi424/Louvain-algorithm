@@ -67,7 +67,7 @@ class Louvain():
             kin = 0
             for s in self.C[c].subs:
                 if s in self.Graph[i]:
-                    kin += self.Graph[i][c]
+                    kin += self.Graph[i][s]
             return kin 
         
         def cal_tot(c):
@@ -93,6 +93,8 @@ class Louvain():
         for i in self.Graph.keys():
             delta_Q = 0
             for n in self.Graph[i].keys():
+                if n not in self.C:
+                    continue
                 c = self.C[n].next_c
                 temp_Q = self.delta_Q(i, c)
                 if temp_Q > delta_Q:
@@ -120,11 +122,12 @@ class Louvain():
             # 把节点i的links转移到社区next_c
             temp = {}
             for s, w in self.Graph[i].items():
-                if s != i: 
-                    temp[s] = w
+                if s == i:
+                    continue
+                temp[s] = w
             for s, w in temp.items():
                 if s == next_c:
-                    del self.Graph[s][i]
+                    del self.Graph[i][s]
                     continue
                 if s in self.Graph[next_c]:
                     self.Graph[next_c][s] += w
@@ -136,15 +139,16 @@ class Louvain():
                 else: 
                     self.Graph[s][next_c] = w
                 del self.Graph[s][i]
+                del self.Graph[i][s]
 
+            if i in self.Graph[next_c]:
+                del self.Graph[next_c][i]
 
         for i in record:
             del self.C[i]
             del self.Graph[i]
             
-                
-
-        
+            
         self.M = self.cal_m()
         self.print_C()
 
