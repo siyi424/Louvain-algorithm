@@ -105,12 +105,12 @@ class Louvain():
 
                     
     def second_stage(self):
-        record = set()
-        for i in self.C.keys():
+        Ckeys = set(self.C.keys())
+        for i in Ckeys:
             if i == self.C[i].next_c:
                 continue
             next_c = self.C[i].next_c
-            record.add(i)
+
             
             # 改变社区c的信息
             self.C[next_c].subs = self.C[next_c].subs | self.C[i].subs
@@ -120,7 +120,9 @@ class Louvain():
             self.C[next_c].inw += self.C[i].inw 
 
             # 把节点i的links转移到社区next_c
-            for s, w in self.Graph[i].items():
+            iTems = list(self.Graph[i].items())
+            for s, w in iTems:
+                del self.Graph[s][i]
                 if s == next_c:
                     continue
                 if s in self.Graph[next_c]:
@@ -132,30 +134,10 @@ class Louvain():
                     self.Graph[s][next_c] += w
                 else: 
                     self.Graph[s][next_c] = w
-
-
-        # 删除已更改中心的节点：1、删除C[i],Graph[i] 2、找到：是i的邻居、是next_c的子节点 3、删除Graph[next_c]与这些节点的关系
-        # 4、删除剩余节点与record的连接。 5、注意删除重复的权重
-        for i in record:
-            rest = set(self.Graph.keys())
-            for j in rest:
-                if i in self.Graph[j]:
-                    del self.Graph[j][i]
             
             del self.Graph[i]
             del self.C[i]
-                
 
-
-        #         del self.Graph[s][i]
-        #         del self.Graph[i][s]
-
-        #     if i in self.Graph[next_c]:
-        #         del self.Graph[next_c][i]
-
-        # for i in record:
-        #     del self.C[i]
-        #     del self.Graph[i]
             
             
         self.M = self.cal_m()
