@@ -60,14 +60,14 @@ class Louvain():
             ki = 0
             for n, w in self.Graph[i].items():
                 ki += w
-            return ki
+            return ki + self.C[i].inw
 
         def cal_kin(i, c):
             kin = 0
             for s in self.C[c].subs:
                 if s in self.Graph[i]:
                     kin += self.Graph[i][s]
-            return kin
+            return kin 
         
         def cal_tot(c):
             tot = 0
@@ -135,9 +135,9 @@ class Louvain():
                 inw = 0
                 for s in Record[i]:
                     for n, w in self.Graph[s].items():
-                        if n in Record[i]:
+                        if n in Record[i] and n != s:
                             inw += w
-                return inw
+                return inw + self.C[p].inw
             
 
             def cal_subs(p):
@@ -152,12 +152,18 @@ class Louvain():
 
             # 改变graph
             Graph[i] = {}
+            # 仅算子节点
             # 把子节点的连接转移到节点i上，同时，因为n中有节点i，相当于把节点i也更新了
             for n in Record[i]:
+                # 防止：当n=i时，把所有子节点又加上了
+                if n == i:
+                    continue
                 for s, w in self.Graph[n].items():
                     # 如果是新的网络节点与该子节点之间的连线，则更新至新的节点i
-                    # if s == i:
-                    #     continue
+                    # 防止把子节点的连接又加上了
+                    if s == i:
+                        continue
+                    # 找到子结点的除了父节点以外的连接，对父节点进行更新
                     if s in Record:
                         if s in Graph[i]:
                             Graph[i][s] += w
@@ -170,12 +176,23 @@ class Louvain():
                             if s in Record[p]:
                                 loc = p
                                 break
-                        # if loc == i:
-                        #     continue
+                        # 防止：找到的是父节点的其它子节点
+                        if loc == i:
+                            continue
                         if loc in Graph[i]:
                             Graph[i][loc] += w
                         else:
                             Graph[i][loc] = w
+        
+        # 更新父节点们
+        for i in Record:
+            for n,w in self.Graph[i].items():
+                if n in Record:
+                    if n in Graph[i]:
+                        Graph[i][n] += w
+                    else:
+                        Graph[i][n] = w
+
         
 
 
