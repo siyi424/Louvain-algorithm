@@ -49,7 +49,7 @@ class Louvain():
         for n in self.Graph.keys():
             for s, w in self.Graph[n].items():
                 res += w / 2
-        return res
+        return res 
 
     
     def delta_Q(self, i, c):
@@ -67,7 +67,7 @@ class Louvain():
             for s in self.C[c].subs:
                 if s in self.Graph[i]:
                     kin += self.Graph[i][s]
-            return kin 
+            return kin
         
         def cal_tot(c):
             tot = 0
@@ -98,11 +98,15 @@ class Louvain():
                 for n in self.Graph[i].keys():
                     c = self.C[n].next_c
                     temp_Q = self.delta_Q(i, c)
-                    if temp_Q > delta_Qs[loc] and c != self.C[i].next_c:
-                        self.C[i].next_c = c
+
+                    if temp_Q > delta_Qs[loc]:
                         delta_Qs[loc] = temp_Q
-                        Changed = True 
-                        Res = True
+                        if c == self.C[i].next_c:
+                            continue
+                        else:
+                            self.C[i].next_c = c
+                            Changed = True 
+                            Res = True
                 loc += 1  
         return Res
         
@@ -129,11 +133,13 @@ class Louvain():
             # 改变C
             def cal_inw(p):
                 inw = 0
-                for n, w in self.Graph[p].items():
-                    if n in Record[p]:
-                        inw += w * 2
+                for s in Record[i]:
+                    for n, w in self.Graph[s].items():
+                        if n in Record[i]:
+                            inw += w
                 return inw
             
+
             def cal_subs(p):
                 subs = Record[p]
                 for n in Record[p]:
@@ -146,9 +152,12 @@ class Louvain():
 
             # 改变graph
             Graph[i] = {}
+            # 把子节点的连接转移到节点i上，同时，因为n中有节点i，相当于把节点i也更新了
             for n in Record[i]:
                 for s, w in self.Graph[n].items():
                     # 如果是新的网络节点与该子节点之间的连线，则更新至新的节点i
+                    # if s == i:
+                    #     continue
                     if s in Record:
                         if s in Graph[i]:
                             Graph[i][s] += w
@@ -161,14 +170,20 @@ class Louvain():
                             if s in Record[p]:
                                 loc = p
                                 break
+                        # if loc == i:
+                        #     continue
                         if loc in Graph[i]:
                             Graph[i][loc] += w
                         else:
                             Graph[i][loc] = w
+        
+
+
         self.C = C
         self.Graph = Graph
         
         self.M = self.cal_m()
+        print(self.M)
 
 
     def excute(self):
@@ -202,6 +217,7 @@ class Louvain():
             res[n] = self.C[n].subs
         return res
     
+
 
 
 def cal_accuracy(path, dataset) -> float:
