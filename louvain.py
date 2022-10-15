@@ -48,7 +48,7 @@ class Louvain():
         res = 0
         for n in self.Graph.keys():
             for s, w in self.Graph[n].items():
-                res += w / 2
+                res += w/2
         return res 
 
     
@@ -64,10 +64,9 @@ class Louvain():
 
         def cal_kin(i, c):
             kin = 0
-            for s in self.C[c].subs:
-                if s in self.Graph[i]:
-                    kin += self.Graph[i][s]
-            return kin 
+            if c in self.Graph[i]:
+                kin = self.Graph[i][c]
+            return kin
         
         def cal_tot(c):
             tot = 0
@@ -101,11 +100,12 @@ class Louvain():
 
                     if temp_Q > delta_Qs[loc]:
                         delta_Qs[loc] = temp_Q
+                        Changed = True
                         if c == self.C[i].next_c:
                             continue
                         else:
                             self.C[i].next_c = c
-                            Changed = True 
+                            # Changed = True 
                             Res = True
                 loc += 1  
         return Res
@@ -121,8 +121,7 @@ class Louvain():
         for i in self.C.keys():
             c = self.C[i].next_c
             if c not in Record:
-                Record[c] = set()
-                Record[c].add(i)
+                Record[c] = set([i])
             else:
                 Record[c].add(i)
         
@@ -133,11 +132,12 @@ class Louvain():
             # 改变C
             def cal_inw(p):
                 inw = 0
-                for s in Record[i]:
+                for s in Record[p]: # 遍历子节点
                     for n, w in self.Graph[s].items():
-                        if n in Record[i] and n != s:
-                            inw += w
-                return inw + self.C[p].inw
+                        if n in Record[p]:
+                            inw += w 
+                    inw += self.C[s].inw
+                return inw 
             
 
             def cal_subs(p):
@@ -151,24 +151,33 @@ class Louvain():
             C[i] = Nodes(subs, inw, i)
 
             # 改变graph
-            Graph[i] = {}
+            if i not in Graph:
+                Graph[i] = {}
+
             # 仅算子节点
-            # 把子节点的连接转移到节点i上，同时，因为n中有节点i，相当于把节点i也更新了
             for n in Record[i]:
                 # 防止：当n=i时，把所有子节点又加上了
-                if n == i:
-                    continue
+                # if n == i:
+                #     continue
                 for s, w in self.Graph[n].items():
                     # 如果是新的网络节点与该子节点之间的连线，则更新至新的节点i
                     # 防止把子节点的连接又加上了
-                    if s == i:
+                    if s in Record[i]:
                         continue
+                    
                     # 找到子结点的除了父节点以外的连接，对父节点进行更新
                     if s in Record:
                         if s in Graph[i]:
                             Graph[i][s] += w
                         else:
                             Graph[i][s] = w
+                        # 从另一边记录边
+                        if s not in Graph:
+                            Graph[s] = {}
+                        if i in Graph[s]:
+                            Graph[s][i] += w
+                        else:
+                            Graph[s][i] = w 
                     else:
                         # 如果不是，则需要先找到s的对应的网络节点，再更新
                         loc = -1
@@ -177,21 +186,33 @@ class Louvain():
                                 loc = p
                                 break
                         # 防止：找到的是父节点的其它子节点
-                        if loc == i:
+                        if loc in Record[i]:
                             continue
                         if loc in Graph[i]:
                             Graph[i][loc] += w
                         else:
                             Graph[i][loc] = w
+                        
+                        if loc not in Graph:
+                            Graph[loc] = {}
+                        if i in Graph[loc]:
+                            Graph[loc][i] += w
+                        else:
+                            Graph[loc][i] = w
         
-        # 更新父节点们
-        for i in Record:
-            for n,w in self.Graph[i].items():
-                if n in Record:
-                    if n in Graph[i]:
-                        Graph[i][n] += w
-                    else:
-                        Graph[i][n] = w
+        # # 更新父节点们
+        # for i in Record:
+        #     for n,w in self.Graph[i].items():
+        #         if n in Record:
+        #             if n in Graph[i]:
+        #                 Graph[i][n] += w
+        #             else:
+        #                 Graph[i][n] = w
+
+                    # if i in Graph[n]:
+                    #     Graph[n][i] += w
+                    # else:
+                    #     Graph[n][i] = w
 
         
 
@@ -201,6 +222,7 @@ class Louvain():
         
         self.M = self.cal_m()
         print(self.M)
+        print(len(self.Graph))
 
 
     def excute(self):
