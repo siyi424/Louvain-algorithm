@@ -219,9 +219,7 @@ class Louvain():
 
         self.C = C
         self.Graph = Graph
-        
         self.M = self.cal_m()
-        print(self.M)
         print(len(self.Graph))
 
 
@@ -251,6 +249,9 @@ class Louvain():
 
     
     def get_res(self):
+        '''
+        res 的结构：{{}, {},...}
+        '''
         res = {}
         for n in self.C:
             res[n] = self.C[n].subs
@@ -283,8 +284,11 @@ def cal_accuracy(path, dataset) -> float:
             else:
                 labels[l] += 1
         res_l = max(labels, key=labels.get)
-        labeled[res_l] = dataset[n]
-    print(labeled)
+        if res_l in labeled:
+            labeled[res_l] |= (dataset[n])
+        else:
+            labeled[res_l] = dataset[n]
+    # print(labeled)
     
     # 计算accuracy
     correct, all_nodes = 0, 0
