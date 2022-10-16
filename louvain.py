@@ -200,19 +200,7 @@ class Louvain():
                         else:
                             Graph[loc][i] = w
         
-        # # 更新父节点们
-        # for i in Record:
-        #     for n,w in self.Graph[i].items():
-        #         if n in Record:
-        #             if n in Graph[i]:
-        #                 Graph[i][n] += w
-        #             else:
-        #                 Graph[i][n] = w
 
-                    # if i in Graph[n]:
-                    #     Graph[n][i] += w
-                    # else:
-                    #     Graph[n][i] = w
 
         
 
@@ -245,7 +233,7 @@ class Louvain():
             sub = set()
             for s in self.C[n].subs:
                 sub.add(s)
-            print("节点",i, '--', n, "----", sub)
+            print("社区个数",i, '聚类中心', n, "----", sub)
 
     
     def get_res(self):
@@ -321,9 +309,13 @@ def print_origon_dataset(path):
 
 if __name__ == "__main__":
     path = "./dataset/email-Eu-core.txt"
+    import time
+    s = time.time()
     Graph = gen_graph(path)
     louvain = Louvain(Graph)
     res = louvain.excute()
+    e = time.time()
+    print('运行时间：', e - s, 's')
 
     path2 = './dataset/email-Eu-core-department-labels.txt'
     ref = print_origon_dataset(path2)
